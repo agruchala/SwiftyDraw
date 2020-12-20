@@ -54,6 +54,10 @@ import UIKit
      - Parameter view: SwiftyDrawView where touches occured.
      */
     func swiftyDraw(didCancelDrawingIn drawingView: SwiftyDrawView, using touch: UITouch)
+    
+    /// Callback with current CGImage from SwiftyDrawView
+    /// - Parameter image: produced image
+    func swiftyDraw(didProduce image: CGImage)
 }
 
 /// UIView Subclass where touch gestures are translated into Core Graphics drawing
@@ -112,6 +116,10 @@ open class SwiftyDrawView: UIView {
     private var previousPoint: CGPoint = .zero
     private var previousPreviousPoint: CGPoint = .zero
     
+    private(set) public var currentImage: CGImage!
+    
+    public var baseImage: CGImage? { didSet { setNeedsDisplay() } }
+    
     // For pencil interactions
     @available(iOS 12.1, *)
     lazy private var pencilInteraction = UIPencilInteraction()
@@ -159,23 +167,49 @@ open class SwiftyDrawView: UIView {
     override open func draw(_ rect: CGRect) {
         guard let context: CGContext = UIGraphicsGetCurrentContext() else { return }
         
+        context.setFillColor(UIColor.white.cgColor)
+        context.fill(bounds)
+        context.translateBy(x: 0, y: bounds.height)
+        context.scaleBy(x: 1, y: -1)
+        
+        if let image = baseImage {
+            context.draw(image, in: bounds)
+        }
+        
         for item in drawItems {
             context.setLineCap(.round)
             context.setLineJoin(.round)
-            context.setLineWidth(item.brush.width)
+            let lineWidth = item.brush.width * item.brush.opacity
+            context.setLineWidth(lineWidth)
             context.setBlendMode(item.brush.blendMode.cgBlendMode)
-            context.setAlpha(item.brush.opacity)
+            
+            let color: CGColor = item.brush.color.uiColor.cgColor
             if (item.isFillPath)
             {
-                context.setFillColor(item.brush.color.uiColor.cgColor)
+                
                 context.addPath(item.path)
+                if item.brush.opacity != 1 {
+                    context.setShadow(offset: .zero, blur: item.brush.width - lineWidth, color: item.brush.color.uiColor.cgColor)
+                }
+                context.setFillColor(color)
                 context.fillPath()
             }
             else {
-                context.setStrokeColor(item.brush.color.uiColor.cgColor)
-                context.addPath(item.path)
-                context.strokePath()
+                for _ in 0...2 {
+                    context.addPath(item.path)
+                    if item.brush.opacity != 1 {
+                        context.setShadow(offset: .zero, blur: item.brush.width - lineWidth, color: item.brush.color.uiColor.cgColor)
+                    }
+                    context.setStrokeColor(color)
+                    context.strokePath()
+                }
             }
+        }
+        context.translateBy(x: 0, y: bounds.height)
+        context.scaleBy(x: 1, y: -1)
+        currentImage = context.makeImage()
+        DispatchQueue.main.async { [unowned self] in
+            delegate?.swiftyDraw(didProduce: currentImage)
         }
     }
     

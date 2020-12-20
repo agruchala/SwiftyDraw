@@ -1,6 +1,7 @@
 import UIKit
 
 extension ViewController: SwiftyDrawViewDelegate {
+    func swiftyDraw(didProduce image: CGImage) { }
     func swiftyDraw(shouldBeginDrawingIn drawingView: SwiftyDrawView, using touch: UITouch) -> Bool { return true }
     func swiftyDraw(didBeginDrawingIn    drawingView: SwiftyDrawView, using touch: UITouch) { updateHistoryButtons() }
     func swiftyDraw(isDrawingIn          drawingView: SwiftyDrawView, using touch: UITouch) {  }

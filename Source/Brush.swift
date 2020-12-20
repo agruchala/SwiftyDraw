@@ -44,7 +44,7 @@ public class Brush: Codable {
     // MARK: - Static brushes
     
     public static var `default`: Brush {
-        return Brush(color: .black, width: 3, opacity: 1)
+        return Brush(color: .black, width: 40, opacity: 0.3)
     }
     
     public static var thin: Brush {
